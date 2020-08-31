@@ -107,13 +107,13 @@ func (r Radio) String() (string, error) {
 
 // css rule template.
 const cssTpl = `@font-face {
-	font-family: "{{.ID}}";
-	src: url("../fonts/{{.FontFamily}}.woff") format("woff");
-	font-display: swap;
-  }
-  .font-{{.ID}} {
-	font-family: {{.ID}};
-  }`
+  font-family: "{{.ID}}";
+  src: url("../fonts/{{.FontFamily}}.woff") format("woff");
+  font-display: swap;
+}
+.font-{{.ID}} {
+  font-family: {{.ID}};
+}`
 
 // radio input template.
 const radioTpl = `<label for="{{.ID}}">
