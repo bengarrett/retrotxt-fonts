@@ -136,7 +136,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	raw, err := ioutil.ReadFile(dataFile)
+	raw, err := ioutil.ReadFile(filepath.Join(usr.HomeDir, dataFile))
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
