@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 const (
@@ -89,6 +90,7 @@ type Radio struct {
 	Name       string // form name that should be the shared for all radio input elements
 	ID         string // unique ID used for JS and CSS assignments
 	FontFamily string // assigned CSS font-family value
+	For        string // label for and input id
 	Label      string // the font title displayed to the end user
 }
 
@@ -116,13 +118,13 @@ const cssTpl = `@font-face {
 }`
 
 // radio input template.
-const radioTpl = `<label for="{{.ID}}">
-  <input type="radio" name="{{.Name}}" id="{{.ID}}" value="{{.FontFamily}}">{{.Label}}
+const radioTpl = `<label for="{{.For}}">
+  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{.Label}}
 </label>`
 
 // header template.
-const hTpl = `<h2 class="title">{{.Origin}}</h2>{{if .Usage}}
-<h3 class="subtitle">{{.Usage}}</h3>{{end}}`
+const hTpl = `<h2 class="title is-size-6">{{.Origin}}</h2>{{if .Usage}}
+<h3 class="subtitle is-size-7">{{.Usage}}</h3>{{end}}`
 
 func main() {
 	var (
@@ -145,6 +147,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n", time.Now().UTC().Format(time.RFC822Z))
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		n := f.WebSafeName
@@ -154,17 +157,17 @@ func main() {
 		const start, msdos, video, semi = 0, 59, 130, 184
 		switch f.Index {
 		case start:
-			fmt.Fprintln(&html, "<h1 class=\"title\">IBM PC &amp; family</h1>")
+			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">IBM PC &amp; family</h1>")
 		case msdos:
-			fmt.Fprintln(&html, "<h1 class=\"title\">MS-DOS compatibles</h1>")
+			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">MS-DOS compatibles</h1>")
 		case video:
-			fmt.Fprintln(&html, "<h1 class=\"title\">Video hardware</h1>")
+			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">Video hardware</h1>")
 		case semi:
-			fmt.Fprintln(&html, "<h1 class=\"title\">Semi-compatibles</h1>")
+			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">Semi-compatibles</h1>")
 		}
 		if f.InfotxtOrigins != h {
 			head := Header{
-				Origin: f.InfotxtOrigins,
+				Origin: title(f.InfotxtOrigins),
 				Usage:  f.InfotxtUsage,
 			}
 			s, err := head.String()
@@ -186,6 +189,7 @@ func main() {
 			Name:       "font",
 			ID:         f.WebSafeName,
 			FontFamily: ff,
+			For:        strings.ToLower(ff),
 			Label:      f.BaseName,
 		}
 		s, err := r.String()
@@ -195,6 +199,7 @@ func main() {
 		}
 		fmt.Fprintln(&html, s)
 	}
+	fmt.Fprintln(&html, "<!-- automatic generation end -->")
 	if err := save(&html, fnHTML); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -242,6 +247,29 @@ func save(b io.WriterTo, name string) error {
 		return fmt.Errorf("save write to %q: %w", name, err)
 	}
 	return nil
+}
+
+func title(n string) string {
+	const (
+		span = "<span class=\"has-text-weight-normal\">"
+		cls  = "</span>"
+	)
+	s := n
+	if strings.ContainsAny(s, "(") {
+		s = strings.Replace(s, "(", span+"(", 1)
+		s += cls
+	} else if strings.Contains(s, "Multimode Graphics Adapter") {
+		s = strings.Replace(s, "Multimode Graphics Adapter", span+"Multimode Graphics Adapter", 1)
+		s += cls
+	}
+	s = strings.ReplaceAll(s, "incl.", "includes")
+	s = strings.Replace(s, "Adapter Interface drivers for", span+"Adapter Interface drivers for"+cls, 1)
+	s = strings.Replace(s, "series video BIOS", span+"series video BIOS"+cls, 1)
+	s = strings.Replace(s, "on-board video", span+"on-board video"+cls, 1)
+	s = strings.Replace(s, "system font", span+"system font"+cls, 1)
+	s = strings.Replace(s, "system-loaded font", span+"system-loaded font"+cls, 1)
+	s = strings.Replace(s, "firmware and system", span+"firmware and system"+cls, 1)
+	return s
 }
 
 func variant(n string) bool {
