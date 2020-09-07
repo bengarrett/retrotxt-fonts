@@ -30,6 +30,7 @@ const (
 type CSS struct {
 	FontFamily string
 	ID         string
+	Size       string // font size in pixel or em
 }
 
 func (c CSS) String() (string, error) {
@@ -92,6 +93,7 @@ type Radio struct {
 	FontFamily string // assigned CSS font-family value
 	For        string // label for and input id
 	Label      string // the font title displayed to the end user
+	Underline  bool   // underline the font label
 }
 
 func (r Radio) String() (string, error) {
@@ -115,16 +117,18 @@ const cssTpl = `@font-face {
 }
 .font-{{.ID}} {
   font-family: {{.ID}};
+  font-size: {{.Size}};
+  line-height: {{.Size}};
 }`
 
 // radio input template.
 const radioTpl = `<label for="{{.For}}">
-  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{.Label}}
+  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
 </label>`
 
 // header template.
-const hTpl = `<h2 class="title is-size-6">{{.Origin}}</h2>{{if .Usage}}
-<h3 class="subtitle is-size-7">{{.Usage}}</h3>{{end}}`
+const hTpl = `<h2 class="title has-text-dark is-size-6 mt-4{{if not .Usage}} mb-2{{end}}">{{.Origin}}</h2>{{if .Usage}}
+<h3 class="subtitle has-text-dark is-size-7 mb-2">{{.Usage}}</h3>{{end}}`
 
 func main() {
 	var (
@@ -147,23 +151,30 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n", time.Now().UTC().Format(time.RFC822Z))
+	now := time.Now().UTC().Format(time.RFC822Z)
+	const start, msdos, video, semi = 0, 59, 130, 184
+	const h1, h10, hr = `<h1 class="title is-size-4 has-text-light mb-0">`, `</h1>`, `<hr>`
+	const info = `<p class="is-size-7">Fonts support the IBM PC original 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
+	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		n := f.WebSafeName
 		if variant(n) {
 			continue
 		}
-		const start, msdos, video, semi = 0, 59, 130, 184
 		switch f.Index {
 		case start:
-			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">IBM PC &amp; family</h1>")
+			fmt.Fprintln(&html, hr+h1+"IBM PC &amp; family"+h10)
+			fmt.Fprintln(&html, info)
 		case msdos:
-			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">MS-DOS compatibles</h1>")
+			fmt.Fprintln(&html, hr+h1+"MS-DOS compatibles"+h10)
+			fmt.Fprintln(&html, info)
 		case video:
-			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">Video hardware</h1>")
+			fmt.Fprintln(&html, hr+h1+"Video hardware"+h10)
+			fmt.Fprintln(&html, info)
 		case semi:
-			fmt.Fprintln(&html, "<h1 class=\"title is-size-4\">Semi-compatibles</h1>")
+			fmt.Fprintln(&html, hr+h1+"Semi-compatibles"+h10)
+			fmt.Fprintln(&html, info)
 		}
 		if f.InfotxtOrigins != h {
 			head := Header{
@@ -191,6 +202,7 @@ func main() {
 			FontFamily: ff,
 			For:        strings.ToLower(ff),
 			Label:      f.BaseName,
+			Underline:  f.HasPlus,
 		}
 		s, err := r.String()
 		if err != nil {
@@ -199,7 +211,7 @@ func main() {
 		}
 		fmt.Fprintln(&html, s)
 	}
-	fmt.Fprintln(&html, "<!-- automatic generation end -->")
+	fmt.Fprintf(&html, "</div>\n<!-- automatic generation end (%s) -->\n", now)
 	if err := save(&html, fnHTML); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -213,6 +225,7 @@ func main() {
 		c := CSS{
 			ID:         f.WebSafeName,
 			FontFamily: fontFamily(f.BaseName),
+			Size:       fmt.Sprintf("%dpx", f.FonWoffSzPx),
 		}
 		s, err := c.String()
 		if err != nil {
