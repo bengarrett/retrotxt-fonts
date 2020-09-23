@@ -122,7 +122,10 @@ const cssTpl = `@font-face {
 }`
 
 // radio input template.
-const radioTpl = `<label for="{{.For}}">
+const radioTpl = `<a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
+  <svg role="img" class="material-icons has-text-dark"><use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
+</a>
+<label for="{{.For}}">
   <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
 </label>`
 
@@ -151,10 +154,42 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	/*
+                  <!-- Modern fonts -->
+                  <div class="box mt-4">
+                    <a id="modern"></a>
+                    <h1 class="title is-size-3 has-text-dark mb-2">Modern</h1>
+                    <p class="is-size-7"><u>Marked</u> fonts support a large range of Unicode glyphs and
+                      languages</p>
+                    <hr>
+                    <h2 class="title has-text-dark is-size-6">
+                      IBM Plex
+                      <a href="https://www.ibm.com/plex/specs" target="_blank">
+                        <svg role="img" class="material-icons has-text-info is-size-7">
+                          <use xlink:href="../assets/svg/material-icons.svg#info"></use>
+                        </svg>
+                      </a>
+                    </h2>
+                    <p class="subtitle has-text-dark is-size-7 mb-2">Plex was designed to capture IBM’s spirit and
+                      history
+                    </p>
+                    <div class="control">
+                      <label class="radio" for="ibmplexmono">
+                        <input type="radio" name="font" id="ibmplexmono" value="ibmplexmono"> <u>Mono Regular</u>
+                      </label>
+                      <label class="radio" for="ibmplextlight">
+                        <input type="radio" name="font" id="ibmplextlight" value="ibmplextlight"> <u>Mono Light</u>
+                      </label>
+                      <label class="radio" for="ibmplextmedium">
+                        <input type="radio" name="font" id="ibmplextmedium" value="ibmplextmedium"> <u>Mono Medium</u>
+                      </label>
+                    </div>
+                    <hr>
+	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
 	const start, msdos, video, semi = 0, 59, 130, 184
-	const h1, h10, hr = `<h1 class="title is-size-4 has-text-light mb-0">`, `</h1>`, `<hr>`
-	const info = `<p class="is-size-7">Fonts support the IBM PC original 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
+	const h1, h10, hr = `<div class="box mt-4"><h1 class="title is-size-3 has-text-dark mb-2">`, `</h1></div>`, `<hr>`
+	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
@@ -164,6 +199,7 @@ func main() {
 		}
 		switch f.Index {
 		case start:
+			// <a id="ibmpc"></a>
 			fmt.Fprintln(&html, hr+h1+"IBM PC &amp; family"+h10)
 			fmt.Fprintln(&html, info)
 		case msdos:
@@ -179,7 +215,7 @@ func main() {
 		if f.InfotxtOrigins != h {
 			head := Header{
 				Origin: title(f.InfotxtOrigins),
-				Usage:  f.InfotxtUsage,
+				Usage:  usage(f.InfotxtUsage),
 			}
 			s, err := head.String()
 			if err != nil {
@@ -282,6 +318,14 @@ func title(n string) string {
 	s = strings.Replace(s, "system font", span+"system font"+cls, 1)
 	s = strings.Replace(s, "system-loaded font", span+"system-loaded font"+cls, 1)
 	s = strings.Replace(s, "firmware and system", span+"firmware and system"+cls, 1)
+	return s
+}
+
+func usage(n string) string {
+	s := strings.ReplaceAll(n, "[?]", "")
+	s = strings.ReplaceAll(s, "w/", "with ")
+	s = strings.ReplaceAll(s, "chars", "characters")
+	s = strings.ReplaceAll(s, "char", "character")
 	return s
 }
 
