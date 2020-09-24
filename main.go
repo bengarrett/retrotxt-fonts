@@ -122,16 +122,15 @@ const cssTpl = `@font-face {
 }`
 
 // radio input template.
-const radioTpl = `<a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
-  <svg role="img" class="material-icons has-text-dark"><use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
-</a>
-<label for="{{.For}}">
+const radioTpl = `<label class="radio" for="{{.For}}">
   <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
-</label>`
+  <a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
+  <svg role="img" class="material-icons has-text-info is-size-7"><use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
+</a></label>`
 
 // header template.
-const hTpl = `<h2 class="title has-text-dark is-size-6 mt-4{{if not .Usage}} mb-2{{end}}">{{.Origin}}</h2>{{if .Usage}}
-<h3 class="subtitle has-text-dark is-size-7 mb-2">{{.Usage}}</h3>{{end}}`
+const hTpl = `<hr><h2 class="title has-text-dark is-size-6 {{if not .Usage}} mb-2{{end}}">{{.Origin}}</h2>{{if .Usage}}
+<p class="subtitle has-text-dark is-size-7 mb-2">{{.Usage}}</p>{{end}}`
 
 func main() {
 	var (
@@ -200,20 +199,16 @@ func main() {
 		switch f.Index {
 		case start:
 			fmt.Fprintln(&html, "<!-- IBM PC -->")
-			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10)
-			fmt.Fprintln(&html, info+hr)
+			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10+info)
 		case msdos:
 			fmt.Fprintln(&html, "</div>\n<!-- MS-DOS -->")
-			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10)
-			fmt.Fprintln(&html, info+hr)
+			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10+info)
 		case video:
 			fmt.Fprintln(&html, "</div>\n<!-- Video hardware -->")
-			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10)
-			fmt.Fprintln(&html, info+hr)
+			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10+info)
 		case semi:
 			fmt.Fprintln(&html, "</div>\n<!-- Semi-compatible -->")
-			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10)
-			fmt.Fprintln(&html, info+hr)
+			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10+info)
 		}
 		if f.InfotxtOrigins != h {
 			head := Header{
