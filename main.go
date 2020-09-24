@@ -17,9 +17,9 @@ import (
 
 const (
 	// path to woff web fonts.
-	fontDir = `github/RetroTxt-daily/ext/fonts`
+	fontDir = `github/bengarrett/RetroTxt-daily/ext/fonts`
 	// path to the json font data store.
-	dataFile = `github/RetroTxt-daily/ext/json/font_info.json`
+	dataFile = `github/bengarrett/RetroTxt-daily/ext/json/font_info.json`
 	// output css filename.
 	fnHTML = `fonts.html`
 	// output html filename.
@@ -188,7 +188,7 @@ func main() {
 	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
 	const start, msdos, video, semi = 0, 59, 130, 184
-	const h1, h10, hr = `<div class="box mt-4"><h1 class="title is-size-3 has-text-dark mb-2">`, `</h1></div>`, `<hr>`
+	const box, h1, h10, hr = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`, `<hr>`
 	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	for i := range fonts.FontInfo {
@@ -199,18 +199,21 @@ func main() {
 		}
 		switch f.Index {
 		case start:
-			// <a id="ibmpc"></a>
-			fmt.Fprintln(&html, hr+h1+"IBM PC &amp; family"+h10)
-			fmt.Fprintln(&html, info)
+			fmt.Fprintln(&html, "<!-- IBM PC -->")
+			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10)
+			fmt.Fprintln(&html, info+hr)
 		case msdos:
-			fmt.Fprintln(&html, hr+h1+"MS-DOS compatibles"+h10)
-			fmt.Fprintln(&html, info)
+			fmt.Fprintln(&html, "</div>\n<!-- MS-DOS -->")
+			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10)
+			fmt.Fprintln(&html, info+hr)
 		case video:
-			fmt.Fprintln(&html, hr+h1+"Video hardware"+h10)
-			fmt.Fprintln(&html, info)
+			fmt.Fprintln(&html, "</div>\n<!-- Video hardware -->")
+			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10)
+			fmt.Fprintln(&html, info+hr)
 		case semi:
-			fmt.Fprintln(&html, hr+h1+"Semi-compatibles"+h10)
-			fmt.Fprintln(&html, info)
+			fmt.Fprintln(&html, "</div>\n<!-- Semi-compatible -->")
+			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10)
+			fmt.Fprintln(&html, info+hr)
 		}
 		if f.InfotxtOrigins != h {
 			head := Header{
@@ -247,7 +250,7 @@ func main() {
 		}
 		fmt.Fprintln(&html, s)
 	}
-	fmt.Fprintf(&html, "</div>\n<!-- automatic generation end (%s) -->\n", now)
+	fmt.Fprintf(&html, "</div></div>\n<!-- automatic generation end (%s) -->\n", now)
 	if err := save(&html, fnHTML); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
