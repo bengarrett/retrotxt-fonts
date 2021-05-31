@@ -265,6 +265,8 @@ func main() {
 	}
 	if errs > 0 {
 		fmt.Printf("\nScanned through %d records and %d woff files were missing!\n", cnt, errs)
+	} else {
+		fmt.Printf("\nScanned through %d records and woff files", cnt)
 	}
 	fmt.Fprintf(&html, "</div></div>\n<!-- automatic generation end (%s) -->\n", now)
 	if err := save(&html, name.SaveHTML); err != nil {
@@ -278,9 +280,13 @@ func main() {
 			continue
 		}
 		c := CSS{
-			ID:         f.WebSafeName,
-			FontFamily: fontFamily(f.BaseName),
-			Size:       fmt.Sprintf("%dpx", f.FonWoffSzPx),
+			ID:   f.WebSafeName,
+			Size: fmt.Sprintf("%dpx", f.FonWoffSzPx),
+		}
+		if f.HasPlus {
+			c.FontFamily = fmt.Sprintf("%s%s", wplus, fontFamily(f.BaseName))
+		} else {
+			c.FontFamily = fmt.Sprintf("%s%s", w437, fontFamily(f.BaseName))
 		}
 		s, err := c.String()
 		if err != nil {
