@@ -268,7 +268,7 @@ func main() {
 	} else {
 		fmt.Printf("\nScanned through %d records and woff files", cnt)
 	}
-	fmt.Fprintf(&html, "</div></div>\n<!-- automatic generation end (%s) -->\n", now)
+	fmt.Fprintf(&html, "</div></div>\n<!-- (%s) automatic generation end -->\n", now)
 	if err := save(&html, name.SaveHTML); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
