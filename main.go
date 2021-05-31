@@ -118,7 +118,7 @@ type Radio struct {
 	Underline  bool   // underline the font label
 }
 
-func (r Radio) String() (string, error) {
+func (r *Radio) String() (string, error) {
 	buf := &bytes.Buffer{}
 	t, err := template.New("webpage").Parse(radioTpl)
 	if err != nil {
@@ -167,7 +167,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	name.init(filepath.Join(usr.HomeDir, "github/RetroTxt"))
+	name.init(filepath.Join(usr.HomeDir, "github", "RetroTxt"))
 	raw, err := ioutil.ReadFile(name.DataJSON)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -211,14 +211,16 @@ func main() {
 	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
 	const box, h1, h10 = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`
-	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
+	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437);` +
+		` <u>marked</u> fonts expands support to some 780 characters</p>`
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	cnt, errs := 0, 0
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		ff := fontFamily(f.BaseName)
 		n := f.WebSafeName
-		web437, webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff)), filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
+		web437 := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff))
+		webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
 		if variant(n) {
 			remove(webPlus)
 			remove(web437)
