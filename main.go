@@ -17,6 +17,8 @@ import (
 
 const (
 	alert = "\u274c"
+	w437  = `Web437_`
+	wplus = `WebPlus_`
 )
 
 // Paths for named files and directory locations.
@@ -238,11 +240,13 @@ func main() {
 			fmt.Fprintln(&html, s)
 		}
 		ff := fontFamily(f.BaseName)
-		filename := filepath.Join(name.WoffFonts, fmt.Sprintf("%s.woff", ff))
-		if _, err := os.Stat(filename); os.IsNotExist(err) {
-			errs++
-			fmt.Printf("\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, n, filename, f)
-			continue
+		web437, webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff)), filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
+		if _, err := os.Stat(webPlus); os.IsNotExist(err) {
+			if _, err := os.Stat(web437); os.IsNotExist(err) {
+				errs++
+				fmt.Printf("\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, n, web437, f)
+				continue
+			}
 		}
 		r := Radio{
 			Name:       "font",
@@ -292,12 +296,19 @@ func main() {
 }
 
 func fontFamily(b string) string {
-	s := strings.ReplaceAll(b, " ", "_")
+	s := b
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "(", "")
+	s = strings.ReplaceAll(s, ")", "")
 	s = strings.ReplaceAll(s, "/", "-")
-	s = strings.ReplaceAll(s, "_re.", "_re")
 	s = strings.ReplaceAll(s, "_:", "_")
 	s = strings.ReplaceAll(s, "AT&T", "ATT")
-	return fmt.Sprintf("Web_%s", s)
+	s = strings.ReplaceAll(s, "_re._", "_re_")
+	if strings.HasSuffix(s, ".") {
+		s = strings.TrimSuffix(s, ".")
+	}
+	s = strings.ReplaceAll(s, "_re.", "_re_")
+	return s
 }
 
 func save(b io.WriterTo, name string) error {
