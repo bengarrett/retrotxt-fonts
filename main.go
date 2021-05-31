@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	alert = "\u274c"
+	alert = "\u274c" // ❌
 	w437  = `Web437_`
 	wplus = `WebPlus_`
 
@@ -209,14 +210,18 @@ func main() {
 	     <hr>
 	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
-	const box, h1, h10, hr = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`, `<hr>`
+	const box, h1, h10 = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`
 	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	cnt, errs := 0, 0
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
+		ff := fontFamily(f.BaseName)
 		n := f.WebSafeName
+		web437, webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff)), filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
 		if variant(n) {
+			remove(webPlus)
+			remove(web437)
 			continue
 		}
 		cnt++
@@ -251,8 +256,6 @@ func main() {
 			h = f.InfotxtOrigins
 			fmt.Fprintln(&html, s)
 		}
-		ff := fontFamily(f.BaseName)
-		web437, webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff)), filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
 		if _, err := os.Stat(webPlus); os.IsNotExist(err) {
 			if _, err := os.Stat(web437); os.IsNotExist(err) {
 				errs++
@@ -327,6 +330,18 @@ func fontFamily(b string) string {
 	}
 	s = strings.ReplaceAll(s, "_re.", "_re_")
 	return s
+}
+
+func remove(name string) {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return
+	} else if err != nil {
+		log.Println(err)
+	}
+	if err := os.Remove(name); err != nil {
+		log.Println(err)
+	}
+	fmt.Println("Removed unused font variant:", name)
 }
 
 func save(b io.WriterTo, name string) error {
