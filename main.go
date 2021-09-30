@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	alert = "\u274c" // ❌
-	w437  = `Web437_`
-	wplus = `WebPlus_`
+	// WebFontExt is the filename extension for the fonts.
+	// Do not include the dot separator.
+	WebFontExt = "woff2"
 
 	// These index values will need updating for each
 	// new The Ultimate Oldschool PC Font Pack release.
@@ -29,20 +29,24 @@ const (
 	// indexVideo: https://int10h.org/oldschool-pc-fonts/fontlist/3#top
 	// indexSemi: https://int10h.org/oldschool-pc-fonts/fontlist/?4#top
 	indexIBM, indexDOS, indexVideo, indexSemi = 1, 60, 160, 253
+
+	alert = "\u274c" // ❌
+	w437  = "Web437_"
+	wplus = "WebPlus_"
 )
 
 // Paths for named files and directory locations.
 type Paths struct {
-	RetroTxt  string // path to the local repo: github.com/bengarrett/RetroTxt.
-	WoffFonts string // path to woff web fonts.
-	DataJSON  string // path to the font json data store.
-	SaveCSS   string // output css filename.
-	SaveHTML  string // output html filename.
+	RetroTxt string // path to the local repo: github.com/bengarrett/RetroTxt.
+	WebFonts string // path to the web fonts.
+	DataJSON string // path to the font json data store.
+	SaveCSS  string // output css filename.
+	SaveHTML string // output html filename.
 }
 
 func (p *Paths) init(root string) {
 	p.RetroTxt = root
-	p.WoffFonts = filepath.Join(p.RetroTxt, "ext", "fonts")
+	p.WebFonts = filepath.Join(p.RetroTxt, "ext", "fonts")
 	p.DataJSON = filepath.Join(p.RetroTxt, "ext", "json", "font_info.json")
 	p.SaveCSS = `fonts.css`
 	p.SaveHTML = `fonts.html`
@@ -53,10 +57,12 @@ type CSS struct {
 	FontFamily string
 	ID         string
 	Size       string // font size in pixel or em
+	WebFontExt string
 }
 
 func (c CSS) String() (string, error) {
 	buf := &bytes.Buffer{}
+	c.WebFontExt = WebFontExt
 	t, err := template.New("css").Parse(cssTpl)
 	if err != nil {
 		return "", fmt.Errorf("input element: %w", err)
@@ -134,7 +140,7 @@ func (r *Radio) String() (string, error) {
 // css rule template.
 const cssTpl = `@font-face {
   font-family: "{{.ID}}";
-  src: url("../fonts/{{.FontFamily}}.woff") format("woff");
+  src: url("../fonts/{{.FontFamily}}.{{.WebFontExt}}") format("{{.WebFontExt}}");
   font-display: swap;
 }
 .font-{{.ID}} {
@@ -219,8 +225,8 @@ func main() {
 		f := &fonts.FontInfo[i]
 		ff := fontFamily(f.BaseName)
 		n := f.WebSafeName
-		web437 := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", w437, ff))
-		webPlus := filepath.Join(name.WoffFonts, fmt.Sprintf("%s%s.woff", wplus, ff))
+		web437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, ff, WebFontExt))
+		webPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, ff, WebFontExt))
 		if variant(n) {
 			remove(webPlus)
 			remove(web437)
@@ -281,9 +287,9 @@ func main() {
 		fmt.Fprintln(&html, s)
 	}
 	if errs > 0 {
-		fmt.Printf("\nScanned through %d records and %d woff files were missing!\n", cnt, errs)
+		fmt.Printf("\nScanned through %d records and %d %s files were missing!\n", cnt, errs, WebFontExt)
 	} else {
-		fmt.Printf("\nScanned through %d records and woff files", cnt)
+		fmt.Printf("\nScanned through %d records and %s files", cnt, WebFontExt)
 	}
 	fmt.Fprintf(&html, "</div></div>\n<!-- (%s) automatic generation end -->\n", now)
 	if err := save(&html, name.SaveHTML); err != nil {
