@@ -529,16 +529,6 @@
   line-height: 8px;
 }
 @font-face {
-  font-family: "dg_one-2y_bold";
-  src: url("../fonts/Web437_DG_One-2y_bold.woff2") format("woff2");
-  font-display: swap;
-}
-.font-dg_one-2y_bold {
-  font-family: dg_one-2y_bold;
-  font-size: 16px;
-  line-height: 16px;
-}
-@font-face {
   font-family: "hp_100lx_6x8";
   src: url("../fonts/WebPlus_HP_100LX_6x8.woff2") format("woff2");
   font-display: swap;
@@ -675,16 +665,6 @@
 }
 .font-nec_multispeed_bold {
   font-family: nec_multispeed_bold;
-  font-size: 8px;
-  line-height: 8px;
-}
-@font-face {
-  font-family: "nec_multispeed-2x_bold";
-  src: url("../fonts/Web437_NEC_MultiSpeed-2x_bold.woff2") format("woff2");
-  font-display: swap;
-}
-.font-nec_multispeed-2x_bold {
-  font-family: nec_multispeed-2x_bold;
   font-size: 8px;
   line-height: 8px;
 }
@@ -1897,16 +1877,6 @@
   font-family: master_512_bold;
   font-size: 8px;
   line-height: 8px;
-}
-@font-face {
-  font-family: "master_512-2y_bold";
-  src: url("../fonts/Web437_Master_512-2y_bold.woff2") format("woff2");
-  font-display: swap;
-}
-.font-master_512-2y_bold {
-  font-family: master_512-2y_bold;
-  font-size: 16px;
-  line-height: 16px;
 }
 @font-face {
   font-family: "master_512-m7";

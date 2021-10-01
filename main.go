@@ -237,19 +237,19 @@ func main() {
 		case indexIBM:
 			fmt.Fprintln(&html, "<!-- IBM PC -->")
 			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10+info)
-			fmt.Printf("\nThe first IBM PC font is: %s (%s)\n", f.BaseName, n)
+			fmt.Printf("\nThe first IBM PC font is: %s (%s, indexIBM=%d)\n", f.BaseName, n, indexIBM)
 		case indexDOS:
 			fmt.Fprintln(&html, "</div>\n<!-- MS-DOS -->")
 			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10+info)
-			fmt.Printf("\nThe first MS-DOS font is: %s (%s)\n", f.BaseName, n)
+			fmt.Printf("\nThe first MS-DOS font is: %s (%s, indexDOS=%d)\n", f.BaseName, n, indexDOS)
 		case indexVideo:
 			fmt.Fprintln(&html, "</div>\n<!-- Video hardware -->")
 			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10+info)
-			fmt.Printf("\nThe first Video hardware font is: %s (%s)\n", f.BaseName, n)
+			fmt.Printf("\nThe first Video hardware font is: %s (%s, indexVideo=%d)\n", f.BaseName, n, indexVideo)
 		case indexSemi:
 			fmt.Fprintln(&html, "</div>\n<!-- Semi-compatible -->")
 			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10+info)
-			fmt.Printf("\nThe first Semi-compatible font is: %s (%s)\n", f.BaseName, n)
+			fmt.Printf("\nThe first Semi-compatible font is: %s (%s, indexSemi=%d)\n", f.BaseName, n, indexSemi)
 		}
 		if f.InfotxtOrigins != h {
 			head := Header{
@@ -397,13 +397,22 @@ func usage(n string) string {
 }
 
 func variant(n string) bool {
-	const tail = 3
-	var end = ""
+	end, tail := "", 3
+	// 3 character check
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
 	switch end {
 	case "-2x", "-2y":
+		return true
+	}
+	// 7 character check
+	end, tail = "", 7
+	if len(n) > tail {
+		end = n[len(n)-tail:]
+	}
+	switch end {
+	case "2x_bold", "2y_bold":
 		return true
 	}
 	return false
