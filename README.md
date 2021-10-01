@@ -15,6 +15,18 @@ cd retrotxt-fonts
 go run .
 ```
 
+Afterwards, `font.css` and `fonts.html` will be saved.
+
+#### `fonts.css`
+
+It is a drop in replacement for [`RetroTxt/ext/css/fonts_ibm.css`](https://github.com/bengarrett/RetroTxt/blob/main/ext/css/fonts_ibm.css)
+
+#### `fonts.html`
+
+It needs to be pasted into [`RetroTxt/ext/html/options.html`](https://github.com/bengarrett/RetroTxt/blob/main/ext/html/options.html)<br>between the HTML comments...
+<br>`<!-- automatic generation begin (00 XXX 00 00:00 +0000)-->`
+<br>`<!-- (00 XXX 00 00:00 +0000) automatic generation end -->`
+
 ### Update or restore The Oldschool PC fonts
 
 The process relies on [Python 3](https://www.python.org/) scripts and libraries that need to be installed.
