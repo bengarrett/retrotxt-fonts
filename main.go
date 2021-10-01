@@ -63,14 +63,17 @@ type CSS struct {
 func (c CSS) String() (string, error) {
 	buf := &bytes.Buffer{}
 	c.WebFontExt = WebFontExt
+
 	t, err := template.New("css").Parse(cssTpl)
 	if err != nil {
 		return "", fmt.Errorf("input element: %w", err)
 	}
+
 	err = t.Execute(buf, c)
 	if err != nil {
 		return "", fmt.Errorf("input template: %w", err)
 	}
+
 	return buf.String(), nil
 }
 
@@ -95,6 +98,20 @@ type Fonts struct {
 	} `json:"font_info"`
 }
 
+func (f Fonts) Match2Y(name string) int {
+	for i, font := range f.FontInfo {
+		if !strings.HasPrefix(font.WebSafeName, name) {
+			continue
+		}
+
+		if strings.HasSuffix(font.WebSafeName, "-2y") {
+			return i
+		}
+	}
+
+	return -1
+}
+
 // Header for groups of similar fonts.
 type Header struct {
 	Origin string
@@ -103,14 +120,17 @@ type Header struct {
 
 func (h Header) String() (string, error) {
 	buf := &bytes.Buffer{}
+
 	t, err := template.New("header").Parse(hTpl)
 	if err != nil {
 		return "", fmt.Errorf("header element: %w", err)
 	}
+
 	err = t.Execute(buf, h)
 	if err != nil {
 		return "", fmt.Errorf("header template: %w", err)
 	}
+
 	return buf.String(), nil
 }
 
@@ -126,14 +146,17 @@ type Radio struct {
 
 func (r *Radio) String() (string, error) {
 	buf := &bytes.Buffer{}
+
 	t, err := template.New("webpage").Parse(radioTpl)
 	if err != nil {
 		return "", fmt.Errorf("input element: %w", err)
 	}
+
 	err = t.Execute(buf, r)
 	if err != nil {
 		return "", fmt.Errorf("input template: %w", err)
 	}
+
 	return buf.String(), nil
 }
 
@@ -141,7 +164,7 @@ func (r *Radio) String() (string, error) {
 const cssTpl = `@font-face {
   font-family: "{{.ID}}";
   src: url("../fonts/{{.FontFamily}}.{{.WebFontExt}}") format("{{.WebFontExt}}");
-  font-display: swap;
+  font-display: auto;
 }
 .font-{{.ID}} {
   font-family: {{.ID}};
@@ -151,9 +174,11 @@ const cssTpl = `@font-face {
 
 // radio input template.
 const radioTpl = `<label class="radio" for="{{.For}}">
-  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
+  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> ` +
+	`{{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
   <a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
-  <svg role="img" class="material-icons has-text-info is-size-7"><use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
+  <svg role="img" class="material-icons has-text-info is-size-7">` +
+	`<use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
 </a></label>`
 
 // header template.
@@ -168,20 +193,21 @@ func main() {
 		h     string
 		name  Paths
 	)
+
 	usr, err := user.Current()
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
+
 	name.init(filepath.Join(usr.HomeDir, "github", "RetroTxt"))
+
 	raw, err := ioutil.ReadFile(name.DataJSON)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
+
 	if err = json.Unmarshal(raw, &fonts); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 	/* Example HTML:
 	   <!-- Modern fonts -->
@@ -216,61 +242,94 @@ func main() {
 	     <hr>
 	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
+
 	const box, h1, h10 = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`
+
 	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437);` +
 		` <u>marked</u> fonts expands support to some 780 characters</p>`
+
+	const squarePx = 8
+
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
+
 	cnt, errs := 0, 0
+
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
-		ff := fontFamily(f.BaseName)
-		n := f.WebSafeName
+		ff, safe := fontFamily(f.BaseName), f.WebSafeName
 		web437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, ff, WebFontExt))
 		webPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, ff, WebFontExt))
-		if variant(n) {
-			remove(webPlus)
-			remove(web437)
-			continue
-		}
+
 		cnt++
+
 		switch f.Index {
 		case indexIBM:
 			fmt.Fprintln(&html, "<!-- IBM PC -->")
 			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10+info)
-			fmt.Printf("\nThe first IBM PC font is: %s (%s, indexIBM=%d)\n", f.BaseName, n, indexIBM)
+			fmt.Printf("\nThe first IBM PC font is: %s (%s, indexIBM=%d)\n",
+				f.BaseName, safe, indexIBM)
 		case indexDOS:
 			fmt.Fprintln(&html, "</div>\n<!-- MS-DOS -->")
 			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10+info)
-			fmt.Printf("\nThe first MS-DOS font is: %s (%s, indexDOS=%d)\n", f.BaseName, n, indexDOS)
+			fmt.Printf("\nThe first MS-DOS font is: %s (%s, indexDOS=%d)\n",
+				f.BaseName, safe, indexDOS)
 		case indexVideo:
 			fmt.Fprintln(&html, "</div>\n<!-- Video hardware -->")
 			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10+info)
-			fmt.Printf("\nThe first Video hardware font is: %s (%s, indexVideo=%d)\n", f.BaseName, n, indexVideo)
+			fmt.Printf("\nThe first Video hardware font is: %s (%s, indexVideo=%d)\n",
+				f.BaseName, safe, indexVideo)
 		case indexSemi:
 			fmt.Fprintln(&html, "</div>\n<!-- Semi-compatible -->")
 			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10+info)
-			fmt.Printf("\nThe first Semi-compatible font is: %s (%s, indexSemi=%d)\n", f.BaseName, n, indexSemi)
+			fmt.Printf("\nThe first Semi-compatible font is: %s (%s, indexSemi=%d)\n",
+				f.BaseName, safe, indexSemi)
 		}
+
+		switch {
+		case fonts.Match2Y(f.WebSafeName) >= 0 &&
+			f.SqAspect == "1:1" && f.OrigH == squarePx && f.OrigW == squarePx:
+			continue
+		case strings.HasSuffix(f.WebSafeName, "-2y") &&
+			f.SqAspect == "1:2" && f.OrigH == squarePx && f.OrigW == squarePx:
+			// do nothing
+			n := strings.TrimSuffix(f.WebSafeName, "-2y")
+			rm437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, n, WebFontExt))
+			rmPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, n, WebFontExt))
+
+			remove(rm437)
+			remove(rmPlus)
+		case variant(safe):
+			remove(webPlus)
+			remove(web437)
+
+			continue
+		}
+
 		if f.InfotxtOrigins != h {
 			head := Header{
 				Origin: title(f.InfotxtOrigins),
 				Usage:  usage(f.InfotxtUsage),
 			}
+
 			s, err := head.String()
 			if err != nil {
-				fmt.Println(err.Error())
-				os.Exit(1)
+				log.Fatalln(err)
 			}
+
 			h = f.InfotxtOrigins
+
 			fmt.Fprintln(&html, s)
 		}
+
 		if _, err := os.Stat(webPlus); os.IsNotExist(err) {
 			if _, err := os.Stat(web437); os.IsNotExist(err) {
 				errs++
-				fmt.Printf("\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, n, web437, f)
+				fmt.Printf("\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, safe, web437, f)
+
 				continue
 			}
 		}
+
 		r := Radio{
 			Name:       "font",
 			ID:         f.WebSafeName,
@@ -279,48 +338,62 @@ func main() {
 			Label:      f.BaseName,
 			Underline:  f.HasPlus,
 		}
+
 		s, err := r.String()
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			log.Fatalln(err)
 		}
+
 		fmt.Fprintln(&html, s)
 	}
+
 	if errs > 0 {
 		fmt.Printf("\nScanned through %d records and %d %s files were missing!\n", cnt, errs, WebFontExt)
 	} else {
 		fmt.Printf("\nScanned through %d records and %s files", cnt, WebFontExt)
 	}
+
 	fmt.Fprintf(&html, "</div></div>\n<!-- (%s) automatic generation end -->\n", now)
+
 	if err := save(&html, name.SaveHTML); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
+
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		n := f.WebSafeName
-		if variant(n) {
+
+		switch {
+		case fonts.Match2Y(n) >= 0 && f.SqAspect == "1:1" && f.OrigH == squarePx && f.OrigW == squarePx:
+			continue
+		case strings.HasSuffix(n, "-2y") && f.SqAspect == "1:2" && f.OrigH == squarePx && f.OrigW == squarePx:
+		// do nothing
+		case variant(n):
 			continue
 		}
+
 		c := CSS{
-			ID:   f.WebSafeName,
-			Size: fmt.Sprintf("%dpx", f.FonWoffSzPx),
+			ID:         f.WebSafeName,
+			Size:       fmt.Sprintf("%dpx", f.FonWoffSzPx),
+			FontFamily: "",
+			WebFontExt: "",
 		}
 		if f.HasPlus {
 			c.FontFamily = fmt.Sprintf("%s%s", wplus, fontFamily(f.BaseName))
 		} else {
 			c.FontFamily = fmt.Sprintf("%s%s", w437, fontFamily(f.BaseName))
 		}
+
 		s, err := c.String()
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			log.Fatalln(err)
 		}
+
 		fmt.Fprintln(&css, s)
 	}
+
 	if err := save(&css, name.SaveCSS); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatalln(err)
 	}
 }
 
@@ -333,10 +406,9 @@ func fontFamily(b string) string {
 	s = strings.ReplaceAll(s, "_:", "_")
 	s = strings.ReplaceAll(s, "AT&T", "ATT")
 	s = strings.ReplaceAll(s, "_re._", "_re_")
-	if strings.HasSuffix(s, ".") {
-		s = strings.TrimSuffix(s, ".")
-	}
+	s = strings.TrimSuffix(s, ".")
 	s = strings.ReplaceAll(s, "_re.", "_re_")
+
 	return s
 }
 
@@ -346,10 +418,12 @@ func remove(name string) {
 	} else if err != nil {
 		log.Println(err)
 	}
+
 	if err := os.Remove(name); err != nil {
 		log.Println(err)
 	}
-	fmt.Println("Removed unused font variant:", name)
+
+	fmt.Printf("Removed unused font variant: %s\n", name)
 }
 
 func save(b io.WriterTo, name string) error {
@@ -357,11 +431,14 @@ func save(b io.WriterTo, name string) error {
 	if err != nil {
 		return fmt.Errorf("save create %q: %w", name, err)
 	}
+
 	w := bufio.NewWriter(f)
+
 	_, err = b.WriteTo(w)
 	if err != nil {
 		return fmt.Errorf("save write to %q: %w", name, err)
 	}
+
 	return nil
 }
 
@@ -370,6 +447,7 @@ func title(n string) string {
 		span = "<span class=\"has-text-weight-normal\">"
 		cls  = "</span>"
 	)
+
 	s := n
 	if strings.ContainsAny(s, "(") {
 		s = strings.Replace(s, "(", span+"(", 1)
@@ -378,6 +456,7 @@ func title(n string) string {
 		s = strings.Replace(s, "Multimode Graphics Adapter", span+"Multimode Graphics Adapter", 1)
 		s += cls
 	}
+
 	s = strings.ReplaceAll(s, "incl.", "includes")
 	s = strings.Replace(s, "Adapter Interface drivers for", span+"Adapter Interface drivers for"+cls, 1)
 	s = strings.Replace(s, "series video BIOS", span+"series video BIOS"+cls, 1)
@@ -385,6 +464,7 @@ func title(n string) string {
 	s = strings.Replace(s, "system font", span+"system font"+cls, 1)
 	s = strings.Replace(s, "system-loaded font", span+"system-loaded font"+cls, 1)
 	s = strings.Replace(s, "firmware and system", span+"firmware and system"+cls, 1)
+
 	return s
 }
 
@@ -393,6 +473,7 @@ func usage(n string) string {
 	s = strings.ReplaceAll(s, "w/", "with ")
 	s = strings.ReplaceAll(s, "chars", "characters")
 	s = strings.ReplaceAll(s, "char", "character")
+
 	return s
 }
 
@@ -402,6 +483,7 @@ func variant(n string) bool {
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
+
 	switch end {
 	case "-2x", "-2y":
 		return true
@@ -411,9 +493,11 @@ func variant(n string) bool {
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
+
 	switch end {
 	case "2x_bold", "2y_bold":
 		return true
 	}
+
 	return false
 }
