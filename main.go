@@ -256,7 +256,7 @@ func main() {
 
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
-		ff, safe := fontFamily(f.BaseName), f.WebSafeName
+		ff, safe := FontFamily(f.BaseName), f.WebSafeName
 		web437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, ff, WebFontExt))
 		webPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, ff, WebFontExt))
 
@@ -296,19 +296,19 @@ func main() {
 			rm437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, n, WebFontExt))
 			rmPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, n, WebFontExt))
 
-			remove(rm437)
-			remove(rmPlus)
-		case variant(safe):
-			remove(webPlus)
-			remove(web437)
+			Remove(rm437)
+			Remove(rmPlus)
+		case Variant(safe):
+			Remove(webPlus)
+			Remove(web437)
 
 			continue
 		}
 
 		if f.InfotxtOrigins != h {
 			head := Header{
-				Origin: title(f.InfotxtOrigins),
-				Usage:  usage(f.InfotxtUsage),
+				Origin: Title(f.InfotxtOrigins),
+				Usage:  Usage(f.InfotxtUsage),
 			}
 
 			s, err := head.String()
@@ -355,7 +355,7 @@ func main() {
 
 	fmt.Fprintf(&html, "</div></div>\n<!-- (%s) automatic generation end -->\n", now)
 
-	if err := save(&html, name.SaveHTML); err != nil {
+	if err := Save(&html, name.SaveHTML); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -368,7 +368,7 @@ func main() {
 			continue
 		case strings.HasSuffix(n, "-2y") && f.SqAspect == "1:2" && f.OrigH == squarePx && f.OrigW == squarePx:
 		// do nothing
-		case variant(n):
+		case Variant(n):
 			continue
 		}
 
@@ -379,9 +379,9 @@ func main() {
 			WebFontExt: "",
 		}
 		if f.HasPlus {
-			c.FontFamily = fmt.Sprintf("%s%s", wplus, fontFamily(f.BaseName))
+			c.FontFamily = fmt.Sprintf("%s%s", wplus, FontFamily(f.BaseName))
 		} else {
-			c.FontFamily = fmt.Sprintf("%s%s", w437, fontFamily(f.BaseName))
+			c.FontFamily = fmt.Sprintf("%s%s", w437, FontFamily(f.BaseName))
 		}
 
 		s, err := c.String()
@@ -392,12 +392,12 @@ func main() {
 		fmt.Fprintln(&css, s)
 	}
 
-	if err := save(&css, name.SaveCSS); err != nil {
+	if err := Save(&css, name.SaveCSS); err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func fontFamily(b string) string {
+func FontFamily(b string) string {
 	s := b
 	s = strings.ReplaceAll(s, " ", "_")
 	s = strings.ReplaceAll(s, "(", "")
@@ -412,7 +412,7 @@ func fontFamily(b string) string {
 	return s
 }
 
-func remove(name string) {
+func Remove(name string) {
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return
 	} else if err != nil {
@@ -426,7 +426,7 @@ func remove(name string) {
 	fmt.Printf("Removed unused font variant: %s\n", name)
 }
 
-func save(b io.WriterTo, name string) error {
+func Save(b io.WriterTo, name string) error {
 	f, err := os.Create(name)
 	if err != nil {
 		return fmt.Errorf("save create %q: %w", name, err)
@@ -442,7 +442,7 @@ func save(b io.WriterTo, name string) error {
 	return nil
 }
 
-func title(n string) string {
+func Title(n string) string {
 	const (
 		span = "<span class=\"has-text-weight-normal\">"
 		cls  = "</span>"
@@ -468,7 +468,7 @@ func title(n string) string {
 	return s
 }
 
-func usage(n string) string {
+func Usage(n string) string {
 	s := strings.ReplaceAll(n, "[?]", "")
 	s = strings.ReplaceAll(s, "w/", "with ")
 	s = strings.ReplaceAll(s, "chars", "characters")
@@ -477,7 +477,7 @@ func usage(n string) string {
 	return s
 }
 
-func variant(n string) bool {
+func Variant(n string) bool {
 	end, tail := "", 3
 	// 3 character check
 	if len(n) > tail {
