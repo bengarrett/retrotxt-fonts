@@ -1,12 +1,44 @@
 package main
 
+/* Example HTML:
+   <!-- Modern fonts -->
+   <div class="box mt-4">
+     <a id="modern"></a>
+     <h1 class="title is-size-3 has-text-dark mb-2">Modern</h1>
+     <p class="is-size-7"><u>Marked</u> fonts support a large range of Unicode glyphs and
+       languages</p>
+     <hr>
+     <h2 class="title has-text-dark is-size-6">
+       IBM Plex
+       <a href="https://www.ibm.com/plex/specs" target="_blank">
+         <svg role="img" class="material-icons has-text-info is-size-7">
+           <use xlink:href="../assets/svg/material-icons.svg#info"></use>
+         </svg>
+       </a>
+     </h2>
+     <p class="subtitle has-text-dark is-size-7 mb-2">Plex was designed to capture IBM’s spirit and
+       history
+     </p>
+     <div class="control">
+       <label class="radio" for="ibmplexmono">
+         <input type="radio" name="font" id="ibmplexmono" value="ibmplexmono"> <u>Mono Regular</u>
+       </label>
+       <label class="radio" for="ibmplextlight">
+         <input type="radio" name="font" id="ibmplextlight" value="ibmplextlight"> <u>Mono Light</u>
+       </label>
+       <label class="radio" for="ibmplextmedium">
+         <input type="radio" name="font" id="ibmplextmedium" value="ibmplextmedium"> <u>Mono Medium</u>
+       </label>
+     </div>
+     <hr>
+*/
+
 import (
 	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -16,24 +48,9 @@ import (
 	"time"
 )
 
-const (
-	// WebFontExt is the filename extension for the fonts.
-	// Do not include the dot separator.
-	WebFontExt = "woff2"
-
-	// These index values will need updating for each
-	// new The Ultimate Oldschool PC Font Pack release.
-	// To determine the first font of each category,
-	// indexIBM: https://int10h.org/oldschool-pc-fonts/fontlist/?1#top
-	// indexDOS: https://int10h.org/oldschool-pc-fonts/fontlist/?2#top
-	// indexVideo: https://int10h.org/oldschool-pc-fonts/fontlist/3#top
-	// indexSemi: https://int10h.org/oldschool-pc-fonts/fontlist/?4#top
-	indexIBM, indexDOS, indexVideo, indexSemi = 1, 60, 160, 253
-
-	alert = "\u274c" // ❌
-	w437  = "Web437_"
-	wplus = "WebPlus_"
-)
+// WebFontExt is the filename extension for the fonts.
+// Do not include the dot separator.
+const WebFontExt = "woff2"
 
 // Paths for named files and directory locations.
 type Paths struct {
@@ -54,10 +71,10 @@ func (p *Paths) init(root string) {
 
 // CSS rules.
 type CSS struct {
-	FontFamily string
-	ID         string
+	FontFamily string // font-family name
+	ID         string // unique ID for the font-family
 	Size       string // font size in pixel or em
-	WebFontExt string
+	WebFontExt string // font file extension
 }
 
 func (c CSS) String() (string, error) {
@@ -114,8 +131,8 @@ func (f Fonts) Match2Y(name string) int {
 
 // Header for groups of similar fonts.
 type Header struct {
-	Origin string
-	Usage  string
+	Origin string // font origin or category
+	Usage  string // font usage information
 }
 
 func (h Header) String() (string, error) {
@@ -186,6 +203,14 @@ const hTpl = `<hr><h2 class="title has-text-dark is-size-6 {{if not .Usage}} mb-
 <p class="subtitle has-text-dark is-size-7 mb-2">{{.Usage}}</p>{{end}}`
 
 func main() {
+	w := os.Stdout
+	if err := Generate(w); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+// Generate creates the HTML and CSS files for the font selection page.
+func Generate(w io.Writer) error { //nolint:funlen,gocognit,gocyclo,cyclop,maintidx
 	var (
 		css   bytes.Buffer
 		html  bytes.Buffer
@@ -194,64 +219,42 @@ func main() {
 		name  Paths
 	)
 
+	const (
+		// These index values will need updating for each
+		// new The Ultimate Oldschool PC Font Pack release.
+		// To determine the first font of each category,
+		// indexIBM: https://int10h.org/oldschool-pc-fonts/fontlist/?1#top
+		// indexDOS: https://int10h.org/oldschool-pc-fonts/fontlist/?2#top
+		// indexVideo: https://int10h.org/oldschool-pc-fonts/fontlist/3#top
+		// indexSemi: https://int10h.org/oldschool-pc-fonts/fontlist/?4#top
+		indexIBM, indexDOS, indexVideo, indexSemi = 1, 60, 160, 253
+
+		alert = "\u274c" // ❌
+		w437  = "Web437_"
+		wplus = "WebPlus_"
+	)
+
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	name.init(filepath.Join(usr.HomeDir, "github", "RetroTxt"))
-
-	raw, err := ioutil.ReadFile(name.DataJSON)
+	raw, err := os.ReadFile(name.DataJSON)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	if err = json.Unmarshal(raw, &fonts); err != nil {
-		log.Fatalln(err)
+		return err
 	}
-	/* Example HTML:
-	   <!-- Modern fonts -->
-	   <div class="box mt-4">
-	     <a id="modern"></a>
-	     <h1 class="title is-size-3 has-text-dark mb-2">Modern</h1>
-	     <p class="is-size-7"><u>Marked</u> fonts support a large range of Unicode glyphs and
-	       languages</p>
-	     <hr>
-	     <h2 class="title has-text-dark is-size-6">
-	       IBM Plex
-	       <a href="https://www.ibm.com/plex/specs" target="_blank">
-	         <svg role="img" class="material-icons has-text-info is-size-7">
-	           <use xlink:href="../assets/svg/material-icons.svg#info"></use>
-	         </svg>
-	       </a>
-	     </h2>
-	     <p class="subtitle has-text-dark is-size-7 mb-2">Plex was designed to capture IBM’s spirit and
-	       history
-	     </p>
-	     <div class="control">
-	       <label class="radio" for="ibmplexmono">
-	         <input type="radio" name="font" id="ibmplexmono" value="ibmplexmono"> <u>Mono Regular</u>
-	       </label>
-	       <label class="radio" for="ibmplextlight">
-	         <input type="radio" name="font" id="ibmplextlight" value="ibmplextlight"> <u>Mono Light</u>
-	       </label>
-	       <label class="radio" for="ibmplextmedium">
-	         <input type="radio" name="font" id="ibmplextmedium" value="ibmplextmedium"> <u>Mono Medium</u>
-	       </label>
-	     </div>
-	     <hr>
-	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
 
 	const box, h1, h10 = `<div class="box">`, `<h1 class="title is-size-3 has-text-dark mb-2">`, `</h1>`
-
 	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437);` +
 		` <u>marked</u> fonts expands support to some 780 characters</p>`
-
 	const squarePx = 8
-
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
-
 	cnt, errs := 0, 0
 
 	for i := range fonts.FontInfo {
@@ -259,32 +262,30 @@ func main() {
 		ff, safe := FontFamily(f.BaseName), f.WebSafeName
 		web437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, ff, WebFontExt))
 		webPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, ff, WebFontExt))
-
 		cnt++
 
 		switch f.Index {
 		case indexIBM:
 			fmt.Fprintln(&html, "<!-- IBM PC -->")
 			fmt.Fprintln(&html, box+"<a id=\"ibmpc\"></a>"+h1+"IBM PC &amp; family"+h10+info)
-			fmt.Printf("\nThe first IBM PC font is: %s (%s, indexIBM=%d)\n",
+			fmt.Fprintf(w, "\nThe first IBM PC font is: %s (%s, indexIBM=%d)\n",
 				f.BaseName, safe, indexIBM)
 		case indexDOS:
 			fmt.Fprintln(&html, "</div>\n<!-- MS-DOS -->")
 			fmt.Fprintln(&html, box+"<a id=\"msdos\"></a>"+h1+"MS-DOS compatibles"+h10+info)
-			fmt.Printf("\nThe first MS-DOS font is: %s (%s, indexDOS=%d)\n",
+			fmt.Fprintf(w, "\nThe first MS-DOS font is: %s (%s, indexDOS=%d)\n",
 				f.BaseName, safe, indexDOS)
 		case indexVideo:
 			fmt.Fprintln(&html, "</div>\n<!-- Video hardware -->")
 			fmt.Fprintln(&html, box+"<a id=\"video\"></a>"+h1+"Video hardware"+h10+info)
-			fmt.Printf("\nThe first Video hardware font is: %s (%s, indexVideo=%d)\n",
+			fmt.Fprintf(w, "\nThe first Video hardware font is: %s (%s, indexVideo=%d)\n",
 				f.BaseName, safe, indexVideo)
 		case indexSemi:
 			fmt.Fprintln(&html, "</div>\n<!-- Semi-compatible -->")
 			fmt.Fprintln(&html, box+"<a id=\"semico\"></a>"+h1+"Semi-compatibles"+h10+info)
-			fmt.Printf("\nThe first Semi-compatible font is: %s (%s, indexSemi=%d)\n",
+			fmt.Fprintf(w, "\nThe first Semi-compatible font is: %s (%s, indexSemi=%d)\n",
 				f.BaseName, safe, indexSemi)
 		}
-
 		switch {
 		case fonts.Match2Y(f.WebSafeName) >= 0 &&
 			f.SqAspect == "1:1" && f.OrigH == squarePx && f.OrigW == squarePx:
@@ -295,13 +296,11 @@ func main() {
 			n := strings.TrimSuffix(f.WebSafeName, "-2y")
 			rm437 := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", w437, n, WebFontExt))
 			rmPlus := filepath.Join(name.WebFonts, fmt.Sprintf("%s%s.%s", wplus, n, WebFontExt))
-
-			Remove(rm437)
-			Remove(rmPlus)
+			Remove(w, rm437)
+			Remove(w, rmPlus)
 		case Variant(safe):
-			Remove(webPlus)
-			Remove(web437)
-
+			Remove(w, webPlus)
+			Remove(w, web437)
 			continue
 		}
 
@@ -310,22 +309,18 @@ func main() {
 				Origin: Title(f.InfotxtOrigins),
 				Usage:  Usage(f.InfotxtUsage),
 			}
-
 			s, err := head.String()
 			if err != nil {
-				log.Fatalln(err)
+				return err
 			}
-
 			h = f.InfotxtOrigins
-
 			fmt.Fprintln(&html, s)
 		}
 
 		if _, err := os.Stat(webPlus); os.IsNotExist(err) {
 			if _, err := os.Stat(web437); os.IsNotExist(err) {
 				errs++
-				fmt.Printf("\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, safe, web437, f)
-
+				fmt.Fprintf(w, "\n%s Skipped %s, file not found: %q\nDebug: %+v\n", alert, safe, web437, f)
 				continue
 			}
 		}
@@ -341,22 +336,22 @@ func main() {
 
 		s, err := r.String()
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		fmt.Fprintln(&html, s)
 	}
 
 	if errs > 0 {
-		fmt.Printf("\nScanned through %d records and %d %s files were missing!\n", cnt, errs, WebFontExt)
+		fmt.Fprintf(w, "\nScanned through %d records and %d %s files were missing!\n", cnt, errs, WebFontExt)
 	} else {
-		fmt.Printf("\nScanned through %d records and %s files", cnt, WebFontExt)
+		fmt.Fprintf(w, "\nScanned through %d records and %s files", cnt, WebFontExt)
 	}
 
 	fmt.Fprintf(&html, "</div></div>\n<!-- (%s) automatic generation end -->\n", now)
 
 	if err := Save(&html, name.SaveHTML); err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	for i := range fonts.FontInfo {
@@ -386,17 +381,19 @@ func main() {
 
 		s, err := c.String()
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		fmt.Fprintln(&css, s)
 	}
 
 	if err := Save(&css, name.SaveCSS); err != nil {
-		log.Fatalln(err)
+		return err
 	}
+	return nil
 }
 
+// FontFamily returns a cleaned up font family name.
 func FontFamily(b string) string {
 	s := b
 	s = strings.ReplaceAll(s, " ", "_")
@@ -412,7 +409,8 @@ func FontFamily(b string) string {
 	return s
 }
 
-func Remove(name string) {
+// Remove deletes a named file if it exists.
+func Remove(w io.Writer, name string) {
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return
 	} else if err != nil {
@@ -422,26 +420,24 @@ func Remove(name string) {
 	if err := os.Remove(name); err != nil {
 		log.Println(err)
 	}
-
-	fmt.Printf("Removed unused font variant: %s\n", name)
+	fmt.Fprintf(w, "Removed unused font variant: %s\n", name)
 }
 
+// Save writes the contents of a WriterTo to a named file.
 func Save(b io.WriterTo, name string) error {
 	f, err := os.Create(name)
 	if err != nil {
 		return fmt.Errorf("save create %q: %w", name, err)
 	}
-
 	w := bufio.NewWriter(f)
-
 	_, err = b.WriteTo(w)
 	if err != nil {
 		return fmt.Errorf("save write to %q: %w", name, err)
 	}
-
 	return nil
 }
 
+// Title returns a cleaned up font title.
 func Title(n string) string {
 	const (
 		span = "<span class=\"has-text-weight-normal\">"
@@ -468,6 +464,7 @@ func Title(n string) string {
 	return s
 }
 
+// Usage returns a cleaned up font usage string.
 func Usage(n string) string {
 	s := strings.ReplaceAll(n, "[?]", "")
 	s = strings.ReplaceAll(s, "w/", "with ")
@@ -477,23 +474,23 @@ func Usage(n string) string {
 	return s
 }
 
+// Variant returns true if the font name is a -2x or -2y variant.
 func Variant(n string) bool {
 	end, tail := "", 3
 	// 3 character check
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
-
 	switch end {
 	case "-2x", "-2y":
 		return true
 	}
+
 	// 7 character check
 	end, tail = "", 7
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
-
 	switch end {
 	case "2x_bold", "2y_bold":
 		return true
