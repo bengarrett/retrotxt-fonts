@@ -1,12 +1,44 @@
 package main
 
+/*
+   <!-- Modern fonts -->
+   <div class="box mt-4">
+     <a id="modern"></a>
+     <h1 class="title is-size-3 has-text-dark mb-2">Modern</h1>
+     <p class="is-size-7"><u>Marked</u> fonts support a large range of Unicode glyphs and
+       languages</p>
+     <hr>
+     <h2 class="title has-text-dark is-size-6">
+       IBM Plex
+       <a href="https://www.ibm.com/plex/specs" target="_blank">
+         <svg role="img" class="material-icons has-text-info is-size-7">
+           <use xlink:href="../assets/svg/material-icons.svg#info"></use>
+         </svg>
+       </a>
+     </h2>
+     <p class="subtitle has-text-dark is-size-7 mb-2">Plex was designed to capture IBM’s spirit and
+       history
+     </p>
+     <div class="control">
+       <label class="radio" for="ibmplexmono">
+         <input type="radio" name="font" id="ibmplexmono" value="ibmplexmono"> <u>Mono Regular</u>
+       </label>
+       <label class="radio" for="ibmplextlight">
+         <input type="radio" name="font" id="ibmplextlight" value="ibmplextlight"> <u>Mono Light</u>
+       </label>
+       <label class="radio" for="ibmplextmedium">
+         <input type="radio" name="font" id="ibmplextmedium" value="ibmplextmedium"> <u>Mono Medium</u>
+       </label>
+     </div>
+     <hr>
+*/
+
 import (
 	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -15,27 +47,16 @@ import (
 	"time"
 )
 
-const (
-	// path to woff web fonts.
-	fontDir = `github/RetroTxt-daily/ext/fonts`
-	// path to the json font data store.
-	dataFile = `github/RetroTxt-daily/ext/json/font_info.json`
-	// output css filename.
-	fnHTML = `fonts.html`
-	// output html filename.
-	fnCSS = `fonts.css`
-)
-
 // CSS rules.
 type CSS struct {
-	FontFamily string
-	ID         string
-	Size       string // font size in pixel or em
+	FontFamily string // Font-family name
+	ID         string // Unique ID for the font-family
+	Size       string // Size of the font as pixel or em values
 }
 
 func (c CSS) String() (string, error) {
 	buf := &bytes.Buffer{}
-	t, err := template.New("css").Parse(cssTpl)
+	t, err := template.New("css").Parse(cssTmpl)
 	if err != nil {
 		return "", fmt.Errorf("input element: %w", err)
 	}
@@ -69,13 +90,13 @@ type Fonts struct {
 
 // Header for groups of similar fonts.
 type Header struct {
-	Origin string
-	Usage  string
+	Origin string // font origin or group name
+	Usage  string // font usage or description
 }
 
 func (h Header) String() (string, error) {
 	buf := &bytes.Buffer{}
-	t, err := template.New("header").Parse(hTpl)
+	t, err := template.New("header").Parse(headTmpl)
 	if err != nil {
 		return "", fmt.Errorf("header element: %w", err)
 	}
@@ -98,7 +119,7 @@ type Radio struct {
 
 func (r Radio) String() (string, error) {
 	buf := &bytes.Buffer{}
-	t, err := template.New("webpage").Parse(radioTpl)
+	t, err := template.New("webpage").Parse(radioTmpl)
 	if err != nil {
 		return "", fmt.Errorf("input element: %w", err)
 	}
@@ -110,7 +131,7 @@ func (r Radio) String() (string, error) {
 }
 
 // css rule template.
-const cssTpl = `@font-face {
+const cssTmpl = `@font-face {
   font-family: "{{.ID}}";
   src: url("../fonts/{{.FontFamily}}.woff") format("woff");
   font-display: swap;
@@ -122,79 +143,65 @@ const cssTpl = `@font-face {
 }`
 
 // radio input template.
-const radioTpl = `<a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
-  <svg role="img" class="material-icons has-text-dark"><use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
+const radioTmpl = `<a href="https://int10h.org/oldschool-pc-fonts/fontlist/font?{{.ID}}" target="_blank">
+  <svg role="img" class="material-icons has-text-dark">` +
+	`<use xlink:href="../assets/svg/material-icons.svg#info"></use></svg>
 </a>
 <label for="{{.For}}">
-  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> {{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
+  <input type="radio" name="{{.Name}}" id="{{.For}}" value="{{.ID}}"> ` +
+	`{{if .Underline}}<u>{{.Label}}</u>{{else}}{{.Label}}{{end}}
 </label>`
 
 // header template.
-const hTpl = `<h2 class="title has-text-dark is-size-6 mt-4{{if not .Usage}} mb-2{{end}}">{{.Origin}}</h2>{{if .Usage}}
+const headTmpl = `<h2 class="title has-text-dark is-size-6 mt-4` +
+	`{{if not .Usage}} mb-2{{end}}">{{.Origin}}</h2>{{if .Usage}}
 <h3 class="subtitle has-text-dark is-size-7 mb-2">{{.Usage}}</h3>{{end}}`
 
 func main() {
+	const (
+		data = `github/RetroTxt/ext/json/font_info.json`
+		font = `github/RetroTxt/ext/fonts`
+	)
+	if err := Generate(data, font); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+}
+
+// Generate creates the HTML and CSS files for the font selection page.
+//
+// The "data" is the file path to the json font data store.
+// The "font" is the directory path to woff web fonts.
+func Generate(data, font string) error {
+	const fnameHTML = `fonts.html` // output html filename
+	const fnameCSS = `fonts.css`   // output css filename
 	var (
-		css   bytes.Buffer
-		html  bytes.Buffer
-		fonts Fonts
-		h     string
+		css    bytes.Buffer
+		html   bytes.Buffer
+		fonts  Fonts
+		header string
 	)
 	usr, err := user.Current()
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
-	raw, err := ioutil.ReadFile(filepath.Join(usr.HomeDir, dataFile))
+	raw, err := os.ReadFile(filepath.Join(usr.HomeDir, data))
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
 	if err = json.Unmarshal(raw, &fonts); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
-	/*
-                  <!-- Modern fonts -->
-                  <div class="box mt-4">
-                    <a id="modern"></a>
-                    <h1 class="title is-size-3 has-text-dark mb-2">Modern</h1>
-                    <p class="is-size-7"><u>Marked</u> fonts support a large range of Unicode glyphs and
-                      languages</p>
-                    <hr>
-                    <h2 class="title has-text-dark is-size-6">
-                      IBM Plex
-                      <a href="https://www.ibm.com/plex/specs" target="_blank">
-                        <svg role="img" class="material-icons has-text-info is-size-7">
-                          <use xlink:href="../assets/svg/material-icons.svg#info"></use>
-                        </svg>
-                      </a>
-                    </h2>
-                    <p class="subtitle has-text-dark is-size-7 mb-2">Plex was designed to capture IBM’s spirit and
-                      history
-                    </p>
-                    <div class="control">
-                      <label class="radio" for="ibmplexmono">
-                        <input type="radio" name="font" id="ibmplexmono" value="ibmplexmono"> <u>Mono Regular</u>
-                      </label>
-                      <label class="radio" for="ibmplextlight">
-                        <input type="radio" name="font" id="ibmplextlight" value="ibmplextlight"> <u>Mono Light</u>
-                      </label>
-                      <label class="radio" for="ibmplextmedium">
-                        <input type="radio" name="font" id="ibmplextmedium" value="ibmplextmedium"> <u>Mono Medium</u>
-                      </label>
-                    </div>
-                    <hr>
-	*/
 	now := time.Now().UTC().Format(time.RFC822Z)
 	const start, msdos, video, semi = 0, 59, 130, 184
 	const h1, h10, hr = `<div class="box mt-4"><h1 class="title is-size-3 has-text-dark mb-2">`, `</h1></div>`, `<hr>`
-	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437); <u>marked</u> fonts expands support to some 780 characters</p>`
+	const info = `<p class="is-size-7">Fonts support the original IBM PC, 256 character encoding (codepage 437);` +
+		` <u>marked</u> fonts expands support to some 780 characters</p>`
 	fmt.Fprintf(&html, "<!-- automatic generation begin (%s) -->\n<div>\n", now)
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		n := f.WebSafeName
-		if variant(n) {
+		if Variant(n) {
 			continue
 		}
 		switch f.Index {
@@ -212,24 +219,23 @@ func main() {
 			fmt.Fprintln(&html, hr+h1+"Semi-compatibles"+h10)
 			fmt.Fprintln(&html, info)
 		}
-		if f.InfotxtOrigins != h {
+		if f.InfotxtOrigins != header {
 			head := Header{
-				Origin: title(f.InfotxtOrigins),
-				Usage:  usage(f.InfotxtUsage),
+				Origin: Title(f.InfotxtOrigins),
+				Usage:  Usage(f.InfotxtUsage),
 			}
 			s, err := head.String()
 			if err != nil {
-				fmt.Println(err.Error())
-				os.Exit(1)
+				return err
 			}
-			h = f.InfotxtOrigins
+			header = f.InfotxtOrigins
 			fmt.Fprintln(&html, s)
 		}
-		ff := fontFamily(f.BaseName)
-		filename := filepath.Join(usr.HomeDir, fontDir, fmt.Sprintf("%s.woff", ff))
+		ff := FontFamily(f.BaseName)
+		filename := filepath.Join(usr.HomeDir, font, ff+".woff")
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
-			fmt.Println("! Font file not found:", ff)
-			fmt.Println(n)
+			fmt.Fprintln(os.Stderr, "! Font file not found:", ff)
+			fmt.Fprintln(os.Stderr, n)
 			continue
 		}
 		r := Radio{
@@ -242,50 +248,49 @@ func main() {
 		}
 		s, err := r.String()
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 		fmt.Fprintln(&html, s)
 	}
 	fmt.Fprintf(&html, "</div>\n<!-- automatic generation end (%s) -->\n", now)
-	if err := save(&html, fnHTML); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	if err := Save(&html, fnameHTML); err != nil {
+		return err
 	}
 	for i := range fonts.FontInfo {
 		f := &fonts.FontInfo[i]
 		n := f.WebSafeName
-		if variant(n) {
+		if Variant(n) {
 			continue
 		}
 		c := CSS{
 			ID:         f.WebSafeName,
-			FontFamily: fontFamily(f.BaseName),
+			FontFamily: FontFamily(f.BaseName),
 			Size:       fmt.Sprintf("%dpx", f.FonWoffSzPx),
 		}
 		s, err := c.String()
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 		fmt.Fprintln(&css, s)
 	}
-	if err := save(&css, fnCSS); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	if err := Save(&css, fnameCSS); err != nil {
+		return err
 	}
+	return nil
 }
 
-func fontFamily(b string) string {
+// FontFamily returns a cleaned up string for the font-family name.
+func FontFamily(b string) string {
 	s := strings.ReplaceAll(b, " ", "_")
 	s = strings.ReplaceAll(s, "/", "-")
 	s = strings.ReplaceAll(s, "_re.", "_re")
 	s = strings.ReplaceAll(s, "_:", "_")
 	s = strings.ReplaceAll(s, "AT&T", "ATT")
-	return fmt.Sprintf("Web_%s", s)
+	return "Web_" + s
 }
 
-func save(b io.WriterTo, name string) error {
+// Save writes the buffer to a named file.
+func Save(b io.WriterTo, name string) error {
 	f, err := os.Create(name)
 	if err != nil {
 		return fmt.Errorf("save create %q: %w", name, err)
@@ -298,7 +303,8 @@ func save(b io.WriterTo, name string) error {
 	return nil
 }
 
-func title(n string) string {
+// Title returns a cleaned up string for the font title.
+func Title(n string) string {
 	const (
 		span = "<span class=\"has-text-weight-normal\">"
 		cls  = "</span>"
@@ -321,7 +327,8 @@ func title(n string) string {
 	return s
 }
 
-func usage(n string) string {
+// Usage returns a cleaned up string for the font usage.
+func Usage(n string) string {
 	s := strings.ReplaceAll(n, "[?]", "")
 	s = strings.ReplaceAll(s, "w/", "with ")
 	s = strings.ReplaceAll(s, "chars", "characters")
@@ -329,9 +336,10 @@ func usage(n string) string {
 	return s
 }
 
-func variant(n string) bool {
+// Variant returns true if the font name is a variant.
+func Variant(n string) bool {
 	const tail = 3
-	var end = ""
+	end := ""
 	if len(n) > tail {
 		end = n[len(n)-tail:]
 	}
